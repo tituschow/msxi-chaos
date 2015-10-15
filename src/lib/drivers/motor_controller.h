@@ -1,41 +1,32 @@
-/*
-  motor_controller.h - Titus Chow
+#pragma once
+#include "relay.h"
+#include "adc12.h"
 
-  This provides a structure for holding a motor controller's relevant data and
-    useful functions for precharge and discharge.
+// This is for motor controller precharge and discharge.
 
-*/
+struct MotorController {
+  struct Relay enable;
+  struct Relay charge;
+  struct Relay discharge;
+  ADC12Index charge_index;
+  ADC12Index discharge_index;
+};
 
-#ifndef MOTOR_CONTROLLER_H_
-#define MOTOR_CONTROLLER_H_
-#include <stdint.h>
-#include <stdbool.h>
+typedef enum {
+  MC_BEGIN_PRECHARGE,
+  MC_END_PRECHARGE,
+  MC_BEGIN_DISCHARGE,
+  MC_END_DISCHARGE
+} MCState;
 
-struct MotorController;
+typedef enum {
+  MC_VOLTAGE_PRECHARGE,
+  MC_VOLTAGE_DISCHARGE
+} MCVoltageType;
 
-extern const struct MotorController *LEFT_MOTORCONTROLLER, *RIGHT_MOTORCONTROLLER;
+void mc_init(const struct MotorController *controller);
 
-// init_motor_controllers() prepares the relays and measurement circuits.
-void init_motor_controllers();
+// Returns whether the state was set correctly
+bool mc_set_state(const struct MotorController *controller, const MCState state);
 
-// begin_precharge(controller) begins the precharge process.
-bool begin_precharge(const struct MotorController *controller);
-
-// end_precharge(controller) ends the precharge process,
-//   enabling the motor controller.
-bool end_precharge(const struct MotorController *controller);
-
-// begin_discharge(controller) begins the discharge process,
-//   disabling the motor controller.
-bool begin_discharge(const struct MotorController *controller);
-
-// end_discharge(controller) ends the discharge process.
-bool end_discharge(const struct MotorController *controller);
-
-// get_precharge_voltage(controller) returns the precharge circuit's voltage.
-uint16_t get_precharge_voltage(const struct MotorController *controller);
-
-// get_discharge_voltage(controller) returns the discharge circuit's voltage.
-uint16_t get_discharge_voltage(const struct MotorController *controller);
-
-#endif
+uint16_t mc_sample_voltage(const struct MotorController *controller, const MCVoltageType type);

@@ -3,17 +3,17 @@
 #include "wdt_a.h"
 
 int main() {
-	WDT_A_hold(WDT_A_BASE);
+  WDT_A_hold(WDT_A_BASE);
 
-	init_sm_framework();
-	init_sm(get_main_sm());
+  sm_framework_init();
+  sm_init(main_sm_get_info());
 
-	__enable_interrupt();
+  __enable_interrupt();
 
-	Event e = NULL_EVENT;
+  Event e = NULL_EVENT;
 
-	while (true) {
-		e = get_next_event();
-		process_event(get_main_sm(), e);
-	}
+  while (true) {
+    e = get_next_event();
+    sm_process_event(main_sm_get_info(), e);
+  }
 }

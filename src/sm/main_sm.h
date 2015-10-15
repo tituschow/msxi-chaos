@@ -1,19 +1,9 @@
-/*
-  main_sm.h - Titus Chow
-
-  This is the main state machine.
-
- */
-
-#ifndef MAIN_SM_H_
-#define MAIN_SM_H_
+#pragma once
 
 typedef enum {
-	KILLSWITCH_ON
+  KILLSWITCH_ON
 } SystemEvent;
 
-void init_main_sm();
+void main_sm_init();
 
-struct StateMachine *get_main_sm();
-
-#endif
+struct StateMachine *main_sm_get_info();
