@@ -1,19 +1,23 @@
-#include "sm/main_sm.h"
+#include "peripheral.h"
 #include "sm/state_machine.h"
+#include "sm/sm_debug.h"
+#include "sm/main.h"
 #include "wdt_a.h"
 
 int main() {
   WDT_A_hold(WDT_A_BASE);
 
-  sm_framework_init();
-  sm_init(main_sm_get_info());
+  peripheral_init();
+
+  sm_framework_init(sm_debug_alert);
+  sm_init(main_get_sm());
 
   __enable_interrupt();
 
-  Event e = NULL_EVENT;
+  struct Event e = NULL_EVENT;
 
   while (true) {
-    e = get_next_event();
-    sm_process_event(main_sm_get_info(), e);
+    e = event_get_next();
+    sm_process_event(main_get_sm(), e);
   }
 }
