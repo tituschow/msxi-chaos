@@ -16,6 +16,7 @@ void peripheral_init(void) {
   power_set_lv(&enable_lv, LV_DISABLED);
 
   can_init(&can);
+
   fail_init(&can);
   sm_debug_init(&sm_debug);
   horn_init(&can, &horn);

@@ -1,5 +1,5 @@
 #include "horn.h"
-#include "can_config.h"
+#include "can/config.h"
 #include <stddef.h>
 
 static const struct CANConfig *can_cfg = NULL;
@@ -13,9 +13,6 @@ void horn_init(const struct CANConfig *can, const struct IOMap *horn) {
   // Horn is connected to an active-high MOSFET?
   io_set_state(pin, IO_LOW);
   io_set_dir(pin, PIN_OUT);
-
-  // TODO: should this be moved into the driver?
-  io_configure_interrupt(&can->interrupt_pin, true, EDGE_FALLING);
 }
 
 // Data rule to process and act on CAN messages.
@@ -24,15 +21,12 @@ void horn_process_message(struct StateMachine *sm, uint16_t ignored) {
   struct CANError error = { 0 };
 
   // Not sure if we care about CAN errors, but this clears any that may have occurred.
-  while(can_process_interrupt(can_cfg, &msg, &error)) {
+  while (can_process_interrupt(can_cfg, &msg, &error)) {
     if (msg.id == THEMIS_HORN) {
       // We got a horn message
-      // Horn messages carry a boolean value - off or on.
-      if (msg.data == 0) {
-        io_set_state(pin, IO_LOW);
-      } else {
-        io_set_state(pin, IO_HIGH);
-      }
+      // Horn messages carry a boolean value - on or off.
+      IOState state = (msg.data == 1) ? IO_HIGH : IO_LOW;
+      io_set_state(pin, state);
     }
   }
 }
