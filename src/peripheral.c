@@ -4,6 +4,7 @@
 #include "drivers/can.h"
 #include "drivers/adc12.h"
 #include "drivers/relay.h"
+#include "drivers/timer.h"
 #include "sm/sm_debug.h"
 #include "events/horn.h"
 #include "events/fail.h"
@@ -13,7 +14,7 @@
 #include "events/motor_controller.h"
 
 void peripheral_init(void) {
-  power_set_lv(&enable_lv, LV_DISABLED);
+  power_set_lv(&enable_lv, LV_ENABLED);
 
   can_init(&can);
 
@@ -21,7 +22,7 @@ void peripheral_init(void) {
   sm_debug_init(&sm_debug);
   horn_init(&can, &horn);
 
-  input_init(&switches);
+  input_init(&input);
   heartbeat_init(&plutus_heartbeat);
 
   adc12_init(&adc12_a);
@@ -29,19 +30,15 @@ void peripheral_init(void) {
 
   relay_init(&relay_battery);
   relay_init(&relay_solar);
+
+  timer_init();
+
+  timer_delay_periodic(40, input_poll, &input);
+  timer_delay_periodic(10, heartbeat_timer_cb, (void *)false);
 }
 
 #pragma vector = PORT1_VECTOR
 __interrupt void PORT1_ISR(void) {
   // Process horn (CAN) messages
   horn_interrupt();
-  heartbeat_interrupt();
-}
-
-#pragma vector = PORT2_VECTOR
-__interrupt void PORT2_ISR(void) {
-  if (input_interrupt(&switches)) {
-    // Something bad happened - exit LPM
-    __bic_SR_register_on_exit(LPM4_bits);
-  }
 }

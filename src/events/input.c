@@ -3,44 +3,47 @@
 #include "drivers/led.h"
 
 typedef enum {
-  POWER_CHARGE = IO_LOW,
-  POWER_RUN = IO_HIGH
+  POWER_CHARGE = IO_HIGH,
+  POWER_RUN = IO_LOW
 } PowerSelect;
 
-void input_init(const struct SwitchInput *input) {
-  io_set_dir(&input->power, PIN_IN);
-  led_init(&input->power_led);
+void input_init(struct InputConfig *input) {
+  io_set_dir(&input->power.pin, PIN_IN);
+  io_set_state(&input->power_led, IO_LOW);
+  io_set_dir(&input->power_led, PIN_OUT);
   io_set_dir(&input->select, PIN_IN);
-  io_set_dir(&input->killswitch, PIN_IN);
+  io_set_dir(&input->killswitch.pin, PIN_IN);
 
-  // Active-low: High -> Low
-  io_configure_interrupt(&input->power, true, EDGE_FALLING);
-  io_configure_interrupt(&input->killswitch, true, EDGE_FALLING);
+  // Pre-populate the power switch:
+  // Don't want to count it as an event if already enabled on startup
+  input->power.state = io_get_state(&input->power.pin);
+
+  // The killswitch should always be inactive on boot.
+  input->killswitch.state = IO_HIGH;
 }
 
-bool input_interrupt(const struct SwitchInput *input) {
-  if (io_process_interrupt(&input->power)) {
-    // Active-low switch - low = power on, high = power off
-    EventID e = (io_get_state(&input->power) == IO_HIGH) ? POWER_OFF : POWER_ON;
-    LEDState state = (io_get_state(&input->power) == IO_HIGH) ? LED_OFF : LED_ON;
+void input_poll(uint16_t elapsed_ms, void *context) {
+  struct InputConfig *input = context;
 
-    led_set_state(&input->power_led, state);
+  IOState power_state = io_get_state(&input->power.pin);
+  if (power_state != input->power.state) {
+    input->power.state = power_state;
 
-    // Raise an event with the selection switch's state as a data value
-    event_raise_isr(e, io_get_state(&input->select));
-
-    // Flip the power switch's interrupt edge so we trigger on the opposite action
-    io_toggle_interrupt_edge(&input->power);
+    // Active-low momentary switch - only trigger on falling edge
+    if (power_state == IO_LOW) {
+      event_raise(POWER_TOGGLE, io_get_state(&input->select));
+    }
   }
 
-  if (io_process_interrupt(&input->killswitch)) {
-    event_raise_isr(EMERGENCY_STOP, 0);
+  // Active-low momentary switch - only trigger on falling edge
+  IOState killswitch_state = io_get_state(&input->killswitch.pin);
+  if (killswitch_state != input->killswitch.state) {
+    input->killswitch.state = killswitch_state;
 
-    // Break immediately
-    return true;
+    if (killswitch_state == IO_LOW) {
+      event_raise(EMERGENCY_STOP, 0);
+    }
   }
-
-  return false;
 }
 
 // Guards
